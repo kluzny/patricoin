@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"math/big"
 	"strconv"
 	"time"
 )
@@ -11,8 +12,8 @@ import (
 func main() {
 	bc := NewBlockchain()
 
-	bc.AddBlock("Send 1 Pleb to alice")
-	bc.AddBlock("Send 2 Pleb to bob")
+	bc.AddBlock("Sent 1 Plebs to Alice")
+	bc.AddBlock("Sent 2 Plebs to Bob")
 
 	for _, block := range bc.blocks {
 		fmt.Printf("Prev: %x\n", block.PrevBlockHash)
@@ -58,4 +59,40 @@ func NewGenesisBlock() *Block {
 
 func NewBlockchain() *Blockchain {
 	return &Blockchain{[]*Block{NewGenesisBlock()}}
+}
+
+// difficulty
+const targetBits = 24
+
+type ProofOfWork struct {
+	block  *Block
+	target *big.Int
+}
+
+func NewProofOfWork(b *Block) *ProofOfWork {
+	target := big.NewInt(1)
+	target.Lsh(target, uint(256-targetBits))
+
+	pow := &ProofOfWork{b, target}
+
+	return pow
+}
+
+func IntToHex(bigly int64) []byte {
+	hexly := strconv.FormatInt(bigly, 16)
+	return []byte(hexly)
+}
+
+func (pow *ProofOfWork) prepareData(nonce int) []byte {
+	data := bytes.Join(
+		[][]byte{
+			pow.block.PrevBlockHash,
+			pow.block.Data,
+			IntToHex(pow.block.Timestamp),
+			IntToHex(int64(targetBits)),
+			IntToHex(int64(nonce)),
+		},
+		[]byte{},
+	)
+	return data
 }
