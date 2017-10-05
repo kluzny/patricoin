@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"math"
 	"math/big"
 	"strconv"
 	"time"
@@ -32,18 +33,15 @@ type Block struct {
 	Data          []byte
 	PrevBlockHash []byte
 	Hash          []byte
-}
-
-func (b *Block) SetHash() {
-	timestamp := []byte(strconv.FormatInt(b.Timestamp, 10))
-	headers := bytes.Join([][]byte{b.PrevBlockHash, b.Data, timestamp}, []byte{})
-	hash := sha256.Sum256(headers)
-	b.Hash = hash[:]
+	Nonce         int
 }
 
 func NewBlock(data string, prevBlockHash []byte) *Block {
-	block := &Block{time.Now().Unix(), []byte(data), prevBlockHash, []byte{}}
-	block.SetHash()
+	block := &Block{time.Now().Unix(), []byte(data), prevBlockHash, []byte{}, 0}
+	pow := NewProofOfWork(block)
+	nonce, hash := pow.Run()
+	block.Hash = hash[:]
+	block.Nonce = nonce
 	return block
 }
 
@@ -95,4 +93,26 @@ func (pow *ProofOfWork) prepareData(nonce int) []byte {
 		[]byte{},
 	)
 	return data
+}
+
+func (pow *ProofOfWork) Run() (int, []byte) {
+	var hashInt big.Int
+	var hash [32]byte
+	maxNonce := math.MaxInt64
+	nonce := 0
+	fmt.Printf("Mining the block containing \"%s\"\n", pow.block.Data)
+	for nonce < maxNonce {
+		data := pow.prepareData(nonce)
+		hash := sha256.Sum256(data)
+		fmt.Printf("\r%x", hash)
+		hashInt.SetBytes(hash[:])
+		if hashInt.Cmp(pow.target) == -1 {
+			break
+		} else {
+			nonce++
+		}
+
+	}
+	fmt.Printf("\n\n")
+	return nonce, hash[:]
 }
