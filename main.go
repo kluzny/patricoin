@@ -17,6 +17,7 @@ func main() {
 	bc.AddBlock("Sent 2 Plebs to Bob")
 
 	for _, block := range bc.blocks {
+		fmt.Printf("Time: %s\n", time.Unix(block.Timestamp, 0))
 		fmt.Printf("Prev: %x\n", block.PrevBlockHash)
 		fmt.Printf("Data: %s\n", block.Data)
 		fmt.Printf("Hash: %x\n", block.Hash)
@@ -60,7 +61,7 @@ func NewBlockchain() *Blockchain {
 }
 
 // difficulty
-const targetBits = 24
+const targetBits = 16
 
 type ProofOfWork struct {
 	block  *Block
@@ -70,9 +71,7 @@ type ProofOfWork struct {
 func NewProofOfWork(b *Block) *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
-
 	pow := &ProofOfWork{b, target}
-
 	return pow
 }
 
@@ -103,7 +102,7 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	fmt.Printf("Mining the block containing \"%s\"\n", pow.block.Data)
 	for nonce < maxNonce {
 		data := pow.prepareData(nonce)
-		hash := sha256.Sum256(data)
+		hash = sha256.Sum256(data)
 		fmt.Printf("\r%x", hash)
 		hashInt.SetBytes(hash[:])
 		if hashInt.Cmp(pow.target) == -1 {
